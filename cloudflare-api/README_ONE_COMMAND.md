@@ -12,6 +12,14 @@ This folder can be reduced to one command after a one-time secret setup.
 3. Keep your named Cloudflare Tunnel running to the local proxy
 4. Ensure `llama-server` is installed and usable
 
+## Recommended values
+
+- `APP_API_KEY=team-demo-key`
+- `PROXY_API_KEY=team-demo-key`
+- `DEFAULT_STT=device`
+- `DEFAULT_REPLY=cloud`
+- `DEFAULT_TTS=device`
+
 ## Daily command
 
 ```bash
@@ -36,3 +44,5 @@ Use these in the Quest app:
 
 - Base URL: value of `WORKER_URL`
 - API key: value of `APP_API_KEY`
+
+If something fails, check [TROUBLESHOOTING.md](TROUBLESHOOTING.md).

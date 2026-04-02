@@ -4,6 +4,7 @@
 
 - Base URL: your deployed Worker URL
 - API key: shared or per-user key
+- endpoint docs from `API_REFERENCE.md`
 
 ## Default client behavior
 
@@ -14,6 +15,12 @@
 ## Main endpoint
 
 `POST /reply`
+
+Recommended defaults:
+
+- `stt = device`
+- `reply = cloud`
+- `tts = device`
 
 Example request:
 
@@ -51,3 +58,8 @@ Content-Type: application/json
 - share only app keys
 - never share Cloudflare API tokens
 - never commit `.env`
+
+## If the host operator is offline
+
+Cloud replies stop working.
+Device STT and device TTS can still work locally inside the Quest app, depending on the app implementation.

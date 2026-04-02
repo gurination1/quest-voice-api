@@ -11,6 +11,15 @@ It is designed for teams who already have a Quest app or 3D avatar experience an
 - API-key based remote access for teammates in different cities
 - an OpenAI-compatible endpoint for easy client integration
 
+## At a glance
+
+- Meta Quest 2 friendly
+- supports `Device STT + Cloud Reply + Device TTS`
+- supports OpenAI-compatible chat clients
+- Cloudflare Worker public API
+- local Qwen 3.5 9B / `llama-server` compatible
+- team-shareable with API keys
+
 ## Recommended architecture
 
 Default mode:
@@ -21,12 +30,36 @@ Default mode:
 
 This keeps latency low and avoids Android microphone-sharing limitations while still letting the team use the same cloud assistant remotely.
 
+```text
+Quest App
+  ├─ Device STT
+  ├─ Device TTS
+  └─ HTTPS -> Cloudflare Worker -> Auth -> Tunnel -> Neo Proxy -> llama-server (Qwen 3.5 9B)
+```
+
+## Quickstart
+
+If you want the fastest working path:
+
+1. go to [`cloudflare-api/`](cloudflare-api/)
+2. copy `.env.example` to `.env`
+3. fill your Cloudflare token and tunnel URL
+4. run:
+
+```bash
+cd cloudflare-api
+./up.sh
+```
+
+That bootstraps the public API, syncs the app key, and runs smoke tests.
+
 ## Repository layout
 
 - `cloudflare-api/`: recommended production-ish backend path
 - `cloud-backend/`: standalone FastAPI backend for Render/Railway/Fly
 - `supabase/functions/live-reply/`: Supabase Edge Function variant
 - `app/`: Android app scaffold for subtitle / reply display
+- `LICENSE`: MIT license
 
 ## Fastest path
 
@@ -50,6 +83,13 @@ That script checks local model availability, ensures the local auth proxy is run
 - `POST /tts`
 - `POST /session/respond`
 - `POST /v1/chat/completions`
+
+See also:
+
+- [API reference](cloudflare-api/API_REFERENCE.md)
+- [Team handoff](cloudflare-api/TEAM_HANDOFF.md)
+- [One-command setup](cloudflare-api/README_ONE_COMMAND.md)
+- [Setup guide](cloudflare-api/SETUP.md)
 
 ## What teammates need
 
@@ -78,3 +118,9 @@ This preserves the same Neo assistant model behavior while giving teammates a st
 ## Production note
 
 For reliable long-term use, replace temporary quick tunnels with a named Cloudflare Tunnel and assign a stable hostname. The repository includes a starting template in [cloudflared-config.example.yml](cloudflare-api/cloudflared-config.example.yml).
+
+## Current gaps
+
+- temporary quick tunnels are fine for testing but not ideal for production
+- Android app scaffold is present, but the strongest path is integrating the API into your existing Quest experience
+- device audio behavior still depends on the host Quest app's audio-focus handling

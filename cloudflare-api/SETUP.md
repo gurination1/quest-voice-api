@@ -19,8 +19,23 @@ cd /home/nyx/subtitle-vr-demo/cloudflare-api
 - `CLOUDFLARE_API_TOKEN`
 - `TUNNEL_PUBLIC_URL`
 
+## Files to look at
+
+- `.env.example`
+- `wrangler.jsonc`
+- `up.sh`
+- `cloudflared-config.example.yml`
+
 ## Recommended stable setup
 
 - use a named tunnel, not a quick tunnel
 - use per-user app keys for real teams
 - keep device STT and device TTS as defaults
+
+## Suggested rollout order
+
+1. get `/health` working
+2. get `/reply` working
+3. integrate with Quest app
+4. add per-user keys
+5. replace quick tunnel with named tunnel
