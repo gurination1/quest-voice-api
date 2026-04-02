@@ -20,6 +20,8 @@ It is designed for teams who already have a Quest app or 3D avatar experience an
 - local Qwen 3.5 9B / `llama-server` compatible
 - team-shareable with API keys
 
+![Architecture](docs/architecture.svg)
+
 ## Recommended architecture
 
 Default mode:
@@ -90,6 +92,8 @@ See also:
 - [Team handoff](cloudflare-api/TEAM_HANDOFF.md)
 - [One-command setup](cloudflare-api/README_ONE_COMMAND.md)
 - [Setup guide](cloudflare-api/SETUP.md)
+- [Named tunnel guide](cloudflare-api/NAMED_TUNNEL.md)
+- [Troubleshooting](cloudflare-api/TROUBLESHOOTING.md)
 
 ## What teammates need
 

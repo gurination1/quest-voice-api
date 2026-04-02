@@ -1,0 +1,29 @@
+name: Repo Checks
+
+on:
+  push:
+    branches: ["main"]
+  pull_request:
+
+jobs:
+  docs-and-worker:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Install Worker dependencies
+        working-directory: cloudflare-api
+        run: npm install
+
+      - name: Verify Wrangler config parses
+        working-directory: cloudflare-api
+        run: npx wrangler deploy --dry-run
+
+      - name: Verify Python backend syntax
+        run: python3 -m py_compile cloud-backend/main.py
