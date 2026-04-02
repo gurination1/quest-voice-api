@@ -1,0 +1,13 @@
+{
+  "worker_url": "https://your-worker.workers.dev",
+  "app_api_key": "replace-me",
+  "proxy_api_key": "replace-me",
+  "tunnel_url": "https://replace-me.example.com",
+  "upstream_mode": "workers_ai",
+  "upstream_openai_model": "nyx",
+  "defaults": {
+    "stt": "device",
+    "reply": "cloud",
+    "tts": "device"
+  }
+}

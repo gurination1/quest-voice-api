@@ -1,0 +1,27 @@
+{
+  "$schema": "./node_modules/wrangler/config-schema.json",
+  "name": "quest-voice-api",
+  "main": "src/index.ts",
+  "compatibility_date": "2026-04-02",
+  "ai": {
+    "binding": "AI"
+  },
+  "kv_namespaces": [
+    {
+      "binding": "API_KEYS",
+      "id": "REPLACE_WITH_REAL_KV_NAMESPACE_ID"
+    }
+  ],
+  "vars": {
+    "UPSTREAM_MODE": "workers_ai",
+    "UPSTREAM_OPENAI_BASE_URL": "",
+    "UPSTREAM_OPENAI_API_KEY": "",
+    "UPSTREAM_OPENAI_MODEL": "nyx",
+    "DEFAULT_REPLY_MODEL": "@cf/qwen/qwen3-30b-a3b-fp8",
+    "DEFAULT_STT_MODEL": "@cf/openai/whisper",
+    "DEFAULT_TTS_MODEL": "@cf/myshell-ai/melotts",
+    "ALLOW_SHARED_KEYS": "true",
+    "ALLOW_PERSONAL_KEYS": "true",
+    "FALLBACK_CONFIG_JSON": "{\"recommended_defaults\":{\"stt\":\"device\",\"reply\":\"cloud\",\"tts\":\"device\"}}"
+  }
+}

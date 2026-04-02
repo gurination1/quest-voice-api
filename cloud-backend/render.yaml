@@ -1,0 +1,12 @@
+services:
+  - type: web
+    name: vr-caption-backend
+    runtime: docker
+    plan: starter
+    dockerfilePath: ./Dockerfile
+    autoDeploy: true
+    envVars:
+      - key: UPSTREAM_MODE
+        value: openai
+      - key: OPENAI_MODEL
+        value: gpt-4o-mini

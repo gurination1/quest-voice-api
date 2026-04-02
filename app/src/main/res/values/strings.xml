@@ -1,0 +1,19 @@
+<resources>
+    <string name="app_name">VR Caption Demo</string>
+    <string name="ready_status">Ready for live subtitles.</string>
+    <string name="starting_status">Starting microphone capture…</string>
+    <string name="listening_status">Listening for speech…</string>
+    <string name="capturing_status">Speech detected.</string>
+    <string name="processing_status">Processing transcript…</string>
+    <string name="reply_status">Generating reply…</string>
+    <string name="retrying_status">Recognition interrupted. Retrying (%1$d)…</string>
+    <string name="recognition_not_available">Speech recognition is not available on this device.</string>
+    <string name="permission_required">Microphone permission is required for subtitles.</string>
+    <string name="start_listening">Start Listening</string>
+    <string name="stop_listening">Stop Listening</string>
+    <string name="clear_screen">Clear Screen</string>
+    <string name="live_subtitles">LIVE SUBTITLES</string>
+    <string name="assistant_reply">AI REPLY</string>
+    <string name="heard_prefix">Heard: </string>
+    <string name="hearing_prefix">Hearing: </string>
+</resources>

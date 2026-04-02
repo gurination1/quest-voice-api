@@ -1,0 +1,10 @@
+<resources>
+    <color name="screen_bg">#08131B</color>
+    <color name="panel_primary">#113244</color>
+    <color name="panel_secondary">#0E2430</color>
+    <color name="title_text">#F4FBFF</color>
+    <color name="body_text">#D2E6EF</color>
+    <color name="status_text">#7FD2EA</color>
+    <color name="section_label">#76AFC1</color>
+    <color name="accent">#F26B3A</color>
+</resources>
