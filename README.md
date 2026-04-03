@@ -130,6 +130,13 @@ Environment overrides:
 - `NEO_TTS_VOICE`: Piper `.onnx` voice path
 - `NEO_MAX_AUDIO_BYTES`: upload cap in bytes
 - `NEO_PRELOAD_STT=1`: preload Whisper on startup for lower first-request latency
+- `NEO_CORS_ALLOW_ORIGINS`: comma-separated allowed browser origins, default `*`
+
+Frontend note:
+
+- browser clients need CORS, and `proxy.py` now enables it
+- default policy is `Access-Control-Allow-Origin: *`
+- if you want to lock it down, set `NEO_CORS_ALLOW_ORIGINS=https://your-app.example,https://staging.example`
 
 Example transcription request:
 

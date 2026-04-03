@@ -15,6 +15,7 @@ from typing import Any
 import httpx
 import uvicorn
 from fastapi import FastAPI, Header, HTTPException, Request
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse, Response, StreamingResponse
 from starlette.background import BackgroundTask
 
@@ -66,8 +67,22 @@ def load_keys() -> set[str]:
 VALID_KEYS: set[str] = load_keys()
 LLAMA_BASE = os.environ.get("LLAMA_HOST", "http://localhost:8080")
 UPSTREAM_TIMEOUT = httpx.Timeout(connect=10.0, read=300.0, write=60.0, pool=60.0)
+CORS_ALLOW_ORIGINS = [
+    origin.strip()
+    for origin in os.environ.get("NEO_CORS_ALLOW_ORIGINS", "*").split(",")
+    if origin.strip()
+]
 
 app = FastAPI(title="Quest Voice API Local Proxy", version="1.1.0")
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=CORS_ALLOW_ORIGINS or ["*"],
+    allow_credentials=False,
+    allow_methods=["*"],
+    allow_headers=["*"],
+    expose_headers=["content-type", "content-length"],
+    max_age=86400,
+)
 
 
 def verify(authorization: str | None) -> None:
