@@ -132,6 +132,11 @@ Environment overrides:
 - `NEO_PRELOAD_STT=1`: preload Whisper on startup for lower first-request latency
 - `NEO_CORS_ALLOW_ORIGINS`: comma-separated allowed browser origins, default `*`
 
+Voice note:
+
+- if `/home/nyx/piper_voices/en_GB-jenny_dioco-medium.onnx` exists, the launcher now prefers that Jenny voice automatically
+- otherwise it falls back to the auto-downloaded `en_US-lessac-medium` voice under `.runtime/voices/`
+
 Frontend note:
 
 - browser clients need CORS, and `proxy.py` now enables it

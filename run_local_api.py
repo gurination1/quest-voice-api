@@ -27,6 +27,7 @@ import uvicorn
 PROJECT_ROOT = Path(__file__).resolve().parent
 RUNTIME_DIR = PROJECT_ROOT / ".runtime"
 VOICE_DIR = RUNTIME_DIR / "voices"
+JENNY_VOICE_PATH = Path("/home/nyx/piper_voices/en_GB-jenny_dioco-medium.onnx")
 DEFAULT_VOICE_NAME = "en_US-lessac-medium"
 DEFAULT_VOICE_PATH = VOICE_DIR / f"{DEFAULT_VOICE_NAME}.onnx"
 DEFAULT_VOICE_CONFIG_PATH = VOICE_DIR / f"{DEFAULT_VOICE_NAME}.onnx.json"
@@ -80,6 +81,9 @@ def download_file(url: str, destination: Path) -> None:
 
 
 def ensure_default_voice() -> Path:
+    if JENNY_VOICE_PATH.exists() and Path(f"{JENNY_VOICE_PATH}.json").exists():
+        return JENNY_VOICE_PATH
+
     if DEFAULT_VOICE_PATH.exists() and DEFAULT_VOICE_CONFIG_PATH.exists():
         return DEFAULT_VOICE_PATH
 

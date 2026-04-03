@@ -15,10 +15,12 @@ from piper.voice import PiperVoice
 
 PROJECT_ROOT = Path(__file__).resolve().parent
 RUNTIME_DIR = PROJECT_ROOT / ".runtime"
+JENNY_VOICE_PATH = Path("/home/nyx/piper_voices/en_GB-jenny_dioco-medium.onnx")
 DEFAULT_VOICE_NAME = "en_US-lessac-medium"
+DEFAULT_RUNTIME_VOICE = RUNTIME_DIR / "voices" / f"{DEFAULT_VOICE_NAME}.onnx"
 DEFAULT_PIPER_MODEL = os.environ.get(
     "NEO_TTS_VOICE",
-    str(RUNTIME_DIR / "voices" / f"{DEFAULT_VOICE_NAME}.onnx"),
+    str(JENNY_VOICE_PATH if JENNY_VOICE_PATH.exists() else DEFAULT_RUNTIME_VOICE),
 )
 DEFAULT_WHISPER_MODEL = os.environ.get("NEO_STT_MODEL", "small.en")
 MAX_AUDIO_BYTES = int(os.environ.get("NEO_MAX_AUDIO_BYTES", str(25 * 1024 * 1024)))
