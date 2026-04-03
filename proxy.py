@@ -11,6 +11,7 @@ import json
 import os
 import re
 import sys
+from pathlib import Path
 from typing import Any
 
 import httpx
@@ -74,9 +75,62 @@ CORS_ALLOW_ORIGINS = [
     if origin.strip()
 ]
 DEFAULT_ASSISTANT_MODEL = os.environ.get("NEO_ASSISTANT_MODEL", "nyx")
-DEFAULT_SYSTEM_PROMPT = os.environ.get(
-    "NEO_DEFAULT_SYSTEM_PROMPT",
-    (
+ENABLE_DEFAULT_SYSTEM_PROMPT = os.environ.get("NEO_ENABLE_DEFAULT_SYSTEM_PROMPT", "1") == "1"
+SANITIZE_TTS_INPUT = os.environ.get("NEO_TTS_SANITIZE_INPUT", "1") == "1"
+NEO_ASSISTANT_CONFIG_PATH = Path(
+    os.environ.get("NEO_ASSISTANT_CONFIG_PATH", "/home/nyx/neo_assistant/config.yaml")
+)
+NYX_SYSTEM_PROMPT_PATH = Path(
+    os.environ.get("NEO_NYX_SYSTEM_PROMPT_PATH", "/home/nyx/assistant/nyx_system_prompt_v3.md")
+)
+
+
+def _extract_neo_persona_from_config(path: Path) -> str | None:
+    if not path.exists():
+        return None
+    try:
+        raw = path.read_text(encoding="utf-8")
+    except Exception:
+        return None
+
+    match = re.search(r"^\s*persona:\s*>\s*\n((?:\s{4,}.*\n?)*)", raw, flags=re.M)
+    if not match:
+        return None
+
+    lines = [line.strip() for line in match.group(1).splitlines() if line.strip()]
+    return " ".join(lines) if lines else None
+
+
+def _extract_prompt_body(path: Path) -> str | None:
+    if not path.exists():
+        return None
+    try:
+        raw = path.read_text(encoding="utf-8")
+    except Exception:
+        return None
+    lines = [line.strip() for line in raw.splitlines() if line.strip() and not line.strip().startswith("#")]
+    return "\n".join(lines) if lines else None
+
+
+def _build_default_system_prompt() -> str:
+    env_prompt = os.environ.get("NEO_DEFAULT_SYSTEM_PROMPT")
+    if env_prompt:
+        return env_prompt
+
+    local_persona = _extract_neo_persona_from_config(NEO_ASSISTANT_CONFIG_PATH)
+    if local_persona:
+        return (
+            f"{local_persona} "
+            "Identity rules: if asked who you are, say you are Neo. "
+            "Do not identify yourself as Qwen, the base model, or a generic AI assistant unless directly asked about the underlying model. "
+            "Keep answers natural for voice playback."
+        )
+
+    nyx_prompt = _extract_prompt_body(NYX_SYSTEM_PROMPT_PATH)
+    if nyx_prompt:
+        return nyx_prompt
+
+    return (
         "You are Neo, a voice-first AI assistant for a Meta Quest experience. "
         "Never say you are Qwen, a language model, or an AI model unless the user directly asks about the underlying model. "
         "If asked who you are, say you are Neo. "
@@ -84,10 +138,10 @@ DEFAULT_SYSTEM_PROMPT = os.environ.get(
         "Do not use markdown, bullet points, emojis, or stage directions. "
         "Do not read punctuation names aloud. "
         "Keep answers concise and helpful."
-    ),
-)
-ENABLE_DEFAULT_SYSTEM_PROMPT = os.environ.get("NEO_ENABLE_DEFAULT_SYSTEM_PROMPT", "1") == "1"
-SANITIZE_TTS_INPUT = os.environ.get("NEO_TTS_SANITIZE_INPUT", "1") == "1"
+    )
+
+
+DEFAULT_SYSTEM_PROMPT = _build_default_system_prompt()
 
 app = FastAPI(title="Quest Voice API Local Proxy", version="1.1.0")
 app.add_middleware(
