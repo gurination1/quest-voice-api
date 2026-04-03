@@ -10,6 +10,7 @@ node_modules/
 # Python
 __pycache__/
 *.pyc
+.venv/
 
 # OS / editor
 .DS_Store
@@ -17,3 +18,5 @@ __pycache__/
 # Local runtime output
 *.log
 /tmp/
+.runtime/
+keys.txt

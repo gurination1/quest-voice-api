@@ -10,6 +10,7 @@ It is designed for teams who already have a Quest app or 3D avatar experience an
 - optional cloud STT and cloud TTS
 - API-key based remote access for teammates in different cities
 - an OpenAI-compatible endpoint for easy client integration
+- optional local STT and local TTS in the auth proxy
 
 ## At a glance
 
@@ -86,6 +87,69 @@ That script checks local model availability, ensures the local auth proxy is run
 - `POST /session/respond`
 - `POST /v1/chat/completions`
 
+## Local proxy endpoints
+
+The repository now includes a local `proxy.py` that keeps chat pass-through behavior and adds additive local audio routes:
+
+- `POST /v1/audio/transcriptions`
+- `POST /v1/audio/speech`
+
+These are designed for:
+
+- Quest app fallback when device STT/TTS is unavailable
+- teammate testing from laptops or phones
+- keeping API-key auth in front of local Whisper and Piper
+
+One-command local bring-up:
+
+```bash
+./start_local_api.sh
+```
+
+That launcher will:
+
+- create `.venv` if needed
+- install Python deps when `requirements.txt` changes
+- download a default Piper voice into `.runtime/voices/`
+- create `keys.txt` if missing
+- try to start the local `llama-server` automatically on this machine
+- start the proxy
+
+Manual bring-up:
+
+```bash
+python3 keygen.py --label quest_team
+python3 -m pip install -r requirements.txt
+python3 proxy.py --host 0.0.0.0 --port 5050
+```
+
+Environment overrides:
+
+- `LLAMA_HOST`: upstream `llama-server`, default `http://localhost:8080`
+- `NEO_STT_MODEL`: local Whisper model name, default `small.en`
+- `NEO_TTS_VOICE`: Piper `.onnx` voice path
+- `NEO_MAX_AUDIO_BYTES`: upload cap in bytes
+- `NEO_PRELOAD_STT=1`: preload Whisper on startup for lower first-request latency
+
+Example transcription request:
+
+```bash
+curl http://127.0.0.1:5050/v1/audio/transcriptions \
+  -H "Authorization: Bearer neo-YOUR_KEY" \
+  -F "file=@sample.webm" \
+  -F "response_format=verbose_json"
+```
+
+Example speech request:
+
+```bash
+curl http://127.0.0.1:5050/v1/audio/speech \
+  -H "Authorization: Bearer neo-YOUR_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{"input":"Testing Quest speech output.","response_format":"mp3"}' \
+  --output speech.wav
+```
+
 See also:
 
 - [API reference](cloudflare-api/API_REFERENCE.md)
@@ -128,3 +192,7 @@ For reliable long-term use, replace temporary quick tunnels with a named Cloudfl
 - temporary quick tunnels are fine for testing but not ideal for production
 - Android app scaffold is present, but the strongest path is integrating the API into your existing Quest experience
 - device audio behavior still depends on the host Quest app's audio-focus handling
+
+See also:
+
+- [`docs/quest-audio-failure-analysis.md`](docs/quest-audio-failure-analysis.md)
