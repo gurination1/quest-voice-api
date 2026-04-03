@@ -23,15 +23,15 @@ This folder can be reduced to one command after a one-time secret setup.
 ## Daily command
 
 ```bash
-cd /home/nyx/subtitle-vr-demo/cloudflare-api
+cd /home/nyx/quest-voice-api/cloudflare-api
 ./up.sh
 ```
 
 ## What `up.sh` does
 
 - verifies local `llama-server`
-- ensures `team-demo-key` exists in `keys.txt`
-- ensures `proxy.py` is running
+- ensures `team-demo-key` exists in `/home/nyx/quest-voice-api/keys.txt`
+- ensures the repo `start_local_api.sh` proxy is running
 - verifies the public tunnel URL
 - rewrites Worker upstream config
 - deploys the Worker

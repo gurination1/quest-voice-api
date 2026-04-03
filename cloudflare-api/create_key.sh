@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-ROOT="/home/nyx/subtitle-vr-demo/cloudflare-api"
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 if [[ $# -lt 2 ]]; then
   echo "Usage: ./create_key.sh <key-value> <label> [shared|personal]"
   exit 1

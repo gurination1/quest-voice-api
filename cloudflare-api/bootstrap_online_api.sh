@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-ROOT="/home/nyx/subtitle-vr-demo/cloudflare-api"
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 CONFIG="$ROOT/deploy_config.json"
 WRANGLER_JSON="$ROOT/wrangler.jsonc"
 

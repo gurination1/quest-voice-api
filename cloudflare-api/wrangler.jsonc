@@ -9,13 +9,13 @@
   "kv_namespaces": [
     {
       "binding": "API_KEYS",
-      "id": "REPLACE_WITH_REAL_KV_NAMESPACE_ID"
+      "id": "7d88ffaaaffe4e44af1ff7528d2602cc"
     }
   ],
   "vars": {
-    "UPSTREAM_MODE": "workers_ai",
-    "UPSTREAM_OPENAI_BASE_URL": "",
-    "UPSTREAM_OPENAI_API_KEY": "",
+    "UPSTREAM_MODE": "openai_proxy",
+    "UPSTREAM_OPENAI_BASE_URL": "https://investigations-soonest-ant-implement.trycloudflare.com",
+    "UPSTREAM_OPENAI_API_KEY": "team-demo-key",
     "UPSTREAM_OPENAI_MODEL": "nyx",
     "DEFAULT_REPLY_MODEL": "@cf/qwen/qwen3-30b-a3b-fp8",
     "DEFAULT_STT_MODEL": "@cf/openai/whisper",

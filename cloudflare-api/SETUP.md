@@ -10,7 +10,7 @@
 ## Daily startup
 
 ```bash
-cd /home/nyx/subtitle-vr-demo/cloudflare-api
+cd /home/nyx/quest-voice-api/cloudflare-api
 ./up.sh
 ```
 

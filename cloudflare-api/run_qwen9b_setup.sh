@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-ROOT="/home/nyx/subtitle-vr-demo/cloudflare-api"
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 CFG="$ROOT/wrangler.jsonc"
 WORKER_URL="https://quest-voice-api.questvoice2026.workers.dev"
 APP_KEY="team-demo-key"

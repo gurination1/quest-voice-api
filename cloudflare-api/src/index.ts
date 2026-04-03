@@ -165,7 +165,7 @@ async function handleReply(request: Request, env: Env, keyRecord: ApiKeyRecord):
   const body = (await request.json()) as ReplyRequest;
   const transcript = body.transcript?.trim();
   if (!transcript) {
-    throw new HttpError(400, "transcript is required");
+    return json({ ok: false, error: "transcript is required" }, 400);
   }
 
   const reply = await generateReply(env, transcript, body.history ?? [], body.mode ?? "fast");
@@ -184,10 +184,19 @@ async function handleReply(request: Request, env: Env, keyRecord: ApiKeyRecord):
 
 async function handleStt(request: Request, env: Env, keyRecord: ApiKeyRecord): Promise<Response> {
   ensureFeature(keyRecord, "cloud_stt");
+  const contentType = request.headers.get("content-type") || "";
+  if (!contentType.toLowerCase().includes("multipart/form-data")) {
+    return json({ ok: false, error: "multipart form-data with audio file is required" }, 400);
+  }
+
+  if (env.UPSTREAM_MODE === "openai_proxy") {
+    return proxySttViaUpstream(request, env);
+  }
+
   const formData = await request.formData();
   const audioFile = formData.get("audio");
   if (!(audioFile instanceof File)) {
-    throw new HttpError(400, "audio file is required");
+    return json({ ok: false, error: "audio file is required" }, 400);
   }
 
   const bytes = await audioFile.arrayBuffer();
@@ -204,10 +213,14 @@ async function handleStt(request: Request, env: Env, keyRecord: ApiKeyRecord): P
 
 async function handleTts(request: Request, env: Env, keyRecord: ApiKeyRecord): Promise<Response> {
   ensureFeature(keyRecord, "cloud_tts");
+  if (env.UPSTREAM_MODE === "openai_proxy") {
+    return proxyTtsViaUpstream(request, env);
+  }
+
   const body = (await request.json()) as { text?: string; voice?: string };
   const text = body.text?.trim();
   if (!text) {
-    throw new HttpError(400, "text is required");
+    return json({ ok: false, error: "text is required" }, 400);
   }
 
   const result = await env.AI.run(env.DEFAULT_TTS_MODEL, {
@@ -236,11 +249,15 @@ async function handleSession(request: Request, env: Env, keyRecord: ApiKeyRecord
   if (!transcript && sttMode === "cloud") {
     ensureFeature(keyRecord, "cloud_stt");
     if (!body.audio_base64) {
-      throw new HttpError(400, "audio_base64 is required when cloud STT is selected");
+      return json({ ok: false, error: "audio_base64 is required when cloud STT is selected" }, 400);
     }
-    const bytes = base64ToUint8Array(body.audio_base64);
-    const sttResult = await env.AI.run(env.DEFAULT_STT_MODEL, { audio: [...bytes] });
-    transcript = sttResult.text ?? "";
+    if (env.UPSTREAM_MODE === "openai_proxy") {
+      transcript = await transcribeViaUpstream(env, body.audio_base64);
+    } else {
+      const bytes = base64ToUint8Array(body.audio_base64);
+      const sttResult = await env.AI.run(env.DEFAULT_STT_MODEL, { audio: [...bytes] });
+      transcript = sttResult.text ?? "";
+    }
   }
 
   let reply = "";
@@ -256,11 +273,15 @@ async function handleSession(request: Request, env: Env, keyRecord: ApiKeyRecord
   let ttsAudio: unknown = null;
   if (ttsMode === "cloud" && reply) {
     ensureFeature(keyRecord, "cloud_tts");
-    const ttsResult = await env.AI.run(env.DEFAULT_TTS_MODEL, {
-      prompt: reply,
-      voice: body.voice || "en-US-Wavenet-A",
-    });
-    ttsAudio = ttsResult.audio ?? null;
+    if (env.UPSTREAM_MODE === "openai_proxy") {
+      ttsAudio = await synthesizeViaUpstream(env, reply, body.voice);
+    } else {
+      const ttsResult = await env.AI.run(env.DEFAULT_TTS_MODEL, {
+        prompt: reply,
+        voice: body.voice || "en-US-Wavenet-A",
+      });
+      ttsAudio = ttsResult.audio ?? null;
+    }
   }
 
   return json({
@@ -290,7 +311,7 @@ async function handleChatCompletions(request: Request, env: Env, keyRecord: ApiK
   const messages = body.messages ?? [];
   const lastUserMessage = [...messages].reverse().find((message) => message.role === "user")?.content?.trim();
   if (!lastUserMessage) {
-    throw new HttpError(400, "at least one user message is required");
+    return json({ ok: false, error: "at least one user message is required" }, 400);
   }
 
   const content = await generateReplyFromMessages(
@@ -405,6 +426,127 @@ async function generateReplyViaUpstream(
     choices?: Array<{ message?: { content?: string } }>;
   };
   return payload.choices?.[0]?.message?.content?.trim() || "";
+}
+
+function upstreamBaseUrl(env: Env): string {
+  const baseUrl = env.UPSTREAM_OPENAI_BASE_URL?.trim();
+  if (!baseUrl) {
+    throw new HttpError(500, "UPSTREAM_OPENAI_BASE_URL is not configured");
+  }
+  return baseUrl.replace(/\/$/, "");
+}
+
+async function proxySttViaUpstream(request: Request, env: Env): Promise<Response> {
+  const incoming = await request.formData();
+  const upload = incoming.get("audio") ?? incoming.get("file");
+  if (!(upload instanceof File)) {
+    return json({ ok: false, error: "audio file is required" }, 400);
+  }
+
+  const upstreamForm = new FormData();
+  upstreamForm.append("file", upload, upload.name || "audio.webm");
+
+  for (const [key, value] of incoming.entries()) {
+    if (key === "audio" || key === "file") {
+      continue;
+    }
+    upstreamForm.append(key, value);
+  }
+
+  const response = await fetch(`${upstreamBaseUrl(env)}/v1/audio/transcriptions`, {
+    method: "POST",
+    headers: {
+      ...(env.UPSTREAM_OPENAI_API_KEY
+        ? { authorization: `Bearer ${env.UPSTREAM_OPENAI_API_KEY}` }
+        : {}),
+    },
+    body: upstreamForm,
+  });
+
+  return relayUpstreamResponse(response);
+}
+
+async function proxyTtsViaUpstream(request: Request, env: Env): Promise<Response> {
+  const body = await request.text();
+  const response = await fetch(`${upstreamBaseUrl(env)}/v1/audio/speech`, {
+    method: "POST",
+    headers: {
+      "content-type": request.headers.get("content-type") || "application/json",
+      ...(env.UPSTREAM_OPENAI_API_KEY
+        ? { authorization: `Bearer ${env.UPSTREAM_OPENAI_API_KEY}` }
+        : {}),
+    },
+    body,
+  });
+
+  return relayUpstreamResponse(response);
+}
+
+async function transcribeViaUpstream(env: Env, audioBase64: string): Promise<string> {
+  const bytes = base64ToUint8Array(audioBase64);
+  const upstreamForm = new FormData();
+  upstreamForm.append("file", new File([bytes], "audio.webm", { type: "audio/webm" }));
+
+  const response = await fetch(`${upstreamBaseUrl(env)}/v1/audio/transcriptions`, {
+    method: "POST",
+    headers: {
+      ...(env.UPSTREAM_OPENAI_API_KEY
+        ? { authorization: `Bearer ${env.UPSTREAM_OPENAI_API_KEY}` }
+        : {}),
+    },
+    body: upstreamForm,
+  });
+
+  if (!response.ok) {
+    const text = await response.text();
+    throw new HttpError(response.status, `Upstream STT error: ${text}`);
+  }
+
+  const payload = (await response.json()) as { text?: string };
+  return payload.text?.trim() || "";
+}
+
+async function synthesizeViaUpstream(env: Env, text: string, voice?: string): Promise<unknown> {
+  const response = await fetch(`${upstreamBaseUrl(env)}/tts`, {
+    method: "POST",
+    headers: {
+      "content-type": "application/json",
+      ...(env.UPSTREAM_OPENAI_API_KEY
+        ? { authorization: `Bearer ${env.UPSTREAM_OPENAI_API_KEY}` }
+        : {}),
+    },
+    body: JSON.stringify({ text, voice }),
+  });
+
+  if (!response.ok) {
+    const textBody = await response.text();
+    throw new HttpError(response.status, `Upstream TTS error: ${textBody}`);
+  }
+
+  const contentType = response.headers.get("content-type") || "audio/mpeg";
+  const buffer = await response.arrayBuffer();
+  return {
+    mime_type: contentType,
+    audio_base64: btoa(String.fromCharCode(...new Uint8Array(buffer))),
+  };
+}
+
+async function relayUpstreamResponse(response: Response): Promise<Response> {
+  const headers = new Headers(corsHeaders);
+  const contentType = response.headers.get("content-type");
+  const contentLength = response.headers.get("content-length");
+
+  if (contentType) {
+    headers.set("content-type", contentType);
+  }
+  if (contentLength) {
+    headers.set("content-length", contentLength);
+  }
+
+  return new Response(await response.arrayBuffer(), {
+    status: response.status,
+    headers,
+  });
 }
 
 function extractTextResult(result: unknown): string {

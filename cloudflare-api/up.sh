@@ -1,9 +1,11 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-ROOT="/home/nyx/subtitle-vr-demo/cloudflare-api"
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PROJECT_ROOT="$(cd "$ROOT/.." && pwd)"
 ENV_FILE="$ROOT/.env"
 WRANGLER_JSON="$ROOT/wrangler.jsonc"
+PROJECT_KEYS_FILE="$PROJECT_ROOT/keys.txt"
 
 if [[ ! -f "$ENV_FILE" ]]; then
   echo "Missing $ENV_FILE"
@@ -47,14 +49,14 @@ echo
 echo
 
 echo "2. Ensuring proxy key exists..."
-touch /home/nyx/keys.txt
-if ! grep -qxF "$PROXY_API_KEY" /home/nyx/keys.txt; then
-  echo "$PROXY_API_KEY" >> /home/nyx/keys.txt
+touch "$PROJECT_KEYS_FILE"
+if ! grep -qxF "$PROXY_API_KEY" "$PROJECT_KEYS_FILE"; then
+  echo "$PROXY_API_KEY" >> "$PROJECT_KEYS_FILE"
 fi
 
 echo "3. Ensuring proxy is running on ${PROXY_HOST}:${PROXY_PORT}..."
 if ! curl --http1.1 -fsS "http://${PROXY_HOST}:${PROXY_PORT}/health" >/home/nyx/.cloudex-runtime/proxy_health.json; then
-  nohup bash -lc "cd /home/nyx && python3 proxy.py --host ${PROXY_HOST} --port ${PROXY_PORT}" >/home/nyx/.cloudex-runtime/proxy.log 2>&1 &
+  nohup "$PROJECT_ROOT/start_local_api.sh" --host "${PROXY_HOST}" --port "${PROXY_PORT}" >/home/nyx/.cloudex-runtime/proxy.log 2>&1 &
   sleep 3
 fi
 curl --http1.1 -fsS "http://${PROXY_HOST}:${PROXY_PORT}/health" >/home/nyx/.cloudex-runtime/proxy_health.json
