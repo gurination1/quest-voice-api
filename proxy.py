@@ -9,6 +9,7 @@ import argparse
 import asyncio
 import json
 import os
+import re
 import sys
 from typing import Any
 
@@ -72,6 +73,21 @@ CORS_ALLOW_ORIGINS = [
     for origin in os.environ.get("NEO_CORS_ALLOW_ORIGINS", "*").split(",")
     if origin.strip()
 ]
+DEFAULT_ASSISTANT_MODEL = os.environ.get("NEO_ASSISTANT_MODEL", "nyx")
+DEFAULT_SYSTEM_PROMPT = os.environ.get(
+    "NEO_DEFAULT_SYSTEM_PROMPT",
+    (
+        "You are Neo, a voice-first AI assistant for a Meta Quest experience. "
+        "Never say you are Qwen, a language model, or an AI model unless the user directly asks about the underlying model. "
+        "If asked who you are, say you are Neo. "
+        "Speak naturally in short, clear sentences that sound good when read aloud. "
+        "Do not use markdown, bullet points, emojis, or stage directions. "
+        "Do not read punctuation names aloud. "
+        "Keep answers concise and helpful."
+    ),
+)
+ENABLE_DEFAULT_SYSTEM_PROMPT = os.environ.get("NEO_ENABLE_DEFAULT_SYSTEM_PROMPT", "1") == "1"
+SANITIZE_TTS_INPUT = os.environ.get("NEO_TTS_SANITIZE_INPUT", "1") == "1"
 
 app = FastAPI(title="Quest Voice API Local Proxy", version="1.1.0")
 app.add_middleware(
@@ -152,6 +168,57 @@ def _segments_to_vtt(segments: list[dict[str, Any]]) -> str:
     return "\n".join(lines).strip() + "\n"
 
 
+def _ensure_default_chat_identity(body: bytes) -> tuple[bytes, bool]:
+    if not ENABLE_DEFAULT_SYSTEM_PROMPT:
+        return body, False
+
+    try:
+        payload = json.loads(body)
+    except Exception:
+        return body, False
+
+    messages = payload.get("messages")
+    if not isinstance(messages, list):
+        return body, False
+
+    has_system_message = any(
+        isinstance(message, dict) and message.get("role") == "system"
+        for message in messages
+    )
+    changed = False
+
+    if not payload.get("model"):
+        payload["model"] = DEFAULT_ASSISTANT_MODEL
+        changed = True
+
+    if not has_system_message:
+        payload["messages"] = [{"role": "system", "content": DEFAULT_SYSTEM_PROMPT}, *messages]
+        changed = True
+
+    if not changed:
+        return body, False
+
+    return json.dumps(payload).encode("utf-8"), True
+
+
+def _sanitize_tts_text(text: str) -> str:
+    cleaned = text.strip()
+    if not cleaned:
+        return cleaned
+
+    cleaned = re.sub(r"```.*?```", " ", cleaned, flags=re.S)
+    cleaned = re.sub(r"`([^`]*)`", r"\1", cleaned)
+    cleaned = re.sub(r"\[([^\]]+)\]\(([^)]+)\)", r"\1", cleaned)
+    cleaned = re.sub(r"[*_#~>\[\]\(\)]", " ", cleaned)
+    cleaned = re.sub(r"https?://\S+", " ", cleaned)
+    cleaned = re.sub(r"\bQwen\b", "Neo", cleaned, flags=re.I)
+    cleaned = re.sub(r"[^\x00-\x7F]+", " ", cleaned)
+    cleaned = re.sub(r"[!?.;,:\-]{2,}", ".", cleaned)
+    cleaned = re.sub(r"\s+", " ", cleaned)
+    cleaned = cleaned.strip(" .")
+    return cleaned
+
+
 async def _proxy_json_request(path: str, body: bytes) -> Response:
     async with httpx.AsyncClient(timeout=UPSTREAM_TIMEOUT) as client:
         try:
@@ -199,6 +266,7 @@ def health() -> dict[str, Any]:
 async def chat_completions(request: Request, authorization: str = Header(default=None)):
     verify(authorization)
     body = await request.body()
+    body, _ = _ensure_default_chat_identity(body)
     headers = {"Content-Type": "application/json"}
 
     try:
@@ -320,6 +388,8 @@ async def audio_speech(
     text = body.get("input") or body.get("text")
     response_format = (body.get("response_format") or "mp3").lower()
     voice = body.get("voice_model") or body.get("voice")
+    if SANITIZE_TTS_INPUT and isinstance(text, str):
+        text = _sanitize_tts_text(text)
 
     try:
         audio_bytes, media_type = await asyncio.to_thread(
